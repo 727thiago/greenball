@@ -1,0 +1,202 @@
+<!DOCTYPE html>  
+<html lang="es">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Juego de la pelota verde</title>  
+    <style>  
+        body {  
+            margin: 0;  
+            overflow: hidden;  
+            background-color: black;  
+            color: white;  
+            font-family: Arial, sans-serif;  
+        }  
+        #gameCanvas {  
+            position: absolute;  
+            top: 0;  
+            left: 0;  
+            display: block;  
+        }  
+        #score {  
+            position: absolute;  
+            top: 10px;  
+            left: 10px;  
+            font-size: 24px;  
+            z-index: 1;  
+        }  
+        #lives {  
+            position: absolute;  
+            top: 50px;  
+            left: 10px;  
+            font-size: 24px;  
+            z-index: 1;  
+        }  
+    </style>  
+</head>  
+<body>  
+    <div id="score">Puntos Amarillos: 0</div>  
+    <div id="lives">Vidas: 1</div>  
+    <canvas id="gameCanvas"></canvas>  
+    <script>  
+        const canvas = document.getElementById('gameCanvas');  
+        const ctx = canvas.getContext('2d');  
+        const scoreDisplay = document.getElementById('score');  
+        const livesDisplay = document.getElementById('lives');  
+
+        // Tamaño del canvas  
+        canvas.width = window.innerWidth;  
+        canvas.height = window.innerHeight;  
+
+        // Punto verde  
+        const player = {  
+            x: canvas.width / 2,  
+            y: canvas.height / 2,  
+            size: 20,  
+            speed: 5,  
+            lives: 1 // Número inicial de vidas  
+        };  
+
+        // Puntos amarillos  
+        const yellowPoints = [];  
+        const yellowSize = 15;  
+        let yellowCount = 0; // Contador de puntos amarillos  
+
+        // Cubo rojo  
+        const redCube = {  
+            x: -100, // Fuera de pantalla inicialmente  
+            y: -100,  
+            size: 30,  
+            active: false  
+        };  
+
+        // Control de las teclas  
+        window.addEventListener('keydown', (e) => {  
+            switch (e.key) {  
+                case 'ArrowUp':  
+                    player.y -= player.speed;  
+                    break;  
+                case 'ArrowDown':  
+                    player.y += player.speed;  
+                    break;  
+                case 'ArrowLeft':  
+                    player.x -= player.speed;  
+                    break;  
+                case 'ArrowRight':  
+                    player.x += player.speed;  
+                    break;  
+            }  
+            // Limitar el movimiento al área del canvas  
+            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));  
+            player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));  
+        });  
+
+        // Generar puntos amarillos  
+        function generateYellowPoint() {  
+            const x = Math.random() * (canvas.width - yellowSize);  
+            const y = Math.random() * (canvas.height - yellowSize);  
+            yellowPoints.push({ x, y });  
+            yellowCount++; // Aumentar el contador  
+            updateScore(); // Actualizar la correa en pantalla  
+        }  
+        setInterval(generateYellowPoint, 5000);  
+
+        // Generar cubo rojo  
+        function generateRedCube() {  
+            // Solo genera si no hay cubo rojo activo  
+            if (!redCube.active) {  
+                redCube.x = Math.random() * (canvas.width - redCube.size);  
+                redCube.y = Math.random() * (canvas.height - redCube.size);  
+                redCube.active = true;  
+            }  
+        }  
+        setInterval(generateRedCube, 15000);  
+
+        // Actualizar la visualización del puntaje  
+        function updateScore() {  
+            scoreDisplay.textContent = `Puntos Amarillos: ${yellowCount}`;  
+        }  
+
+        // Actualizar la visualización de vidas  
+        function updateLives() {  
+            livesDisplay.textContent = `Vidas: ${player.lives}`;  
+        }  
+
+        // Mover los puntos amarillos hacia el punto verde  
+        function moveYellowPoints() {  
+            for (let point of yellowPoints) {  
+                const dx = player.x - point.x;  
+                const dy = player.y - point.y;  
+                const distance = Math.sqrt(dx * dx + dy * dy);  
+
+                // Normalizar la dirección  
+                if (distance > 0) {  
+                    point.x += (dx / distance) * 1; // velocidad lenta del punto amarillo  
+                    point.y += (dy / distance) * 1; // velocidad lenta del punto amarillo  
+                }  
+            }  
+        }  
+
+        // Detectar colisión entre el jugador y los puntos amarillos  
+        function detectCollision() {  
+            for (let point of yellowPoints) {  
+                const dx = player.x - point.x;  
+                const dy = player.y - point.y;  
+                const distance = Math.sqrt(dx * dx + dy * dy);  
+                if (distance < player.size + yellowSize) {  
+                    alert('¡Te atraparon! Fin del juego.');  
+                    document.location.reload();  
+                }  
+            }  
+        }  
+
+        // Detectar colisión entre el jugador y el cubo rojo  
+        function detectRedCubeCollision() {  
+            if (redCube.active) {  
+                const dx = player.x - redCube.x;  
+                const dy = player.y - redCube.y;  
+                const distance = Math.sqrt(dx * dx + dy * dy);  
+                if (distance < player.size + redCube.size) {  
+                    player.lives++; // Aumentar vidas  
+                    redCube.active = false; // Desactivar el cubo rojo  
+                    updateLives(); // Actualizar la visualización de vidas  
+                }  
+            }  
+        }  
+
+        // Dibujar elementos en el canvas  
+        function draw() {  
+            ctx.clearRect(0, 0, canvas.width, canvas.height);  
+
+            // Dibujar punto verde  
+            ctx.fillStyle = 'green';  
+            ctx.beginPath();  
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);  
+            ctx.fill();  
+
+            // Dibujar puntos amarillos  
+            ctx.fillStyle = 'yellow';  
+            for (let point of yellowPoints) {  
+                ctx.beginPath();  
+                ctx.arc(point.x + yellowSize / 2, point.y + yellowSize / 2, yellowSize / 2, 0, Math.PI * 2);  
+                ctx.fill();  
+            }  
+
+            // Dibujar cubo rojo si está activo  
+            if (redCube.active) {  
+                ctx.fillStyle = 'red';  
+                ctx.fillRect(redCube.x, redCube.y, redCube.size, redCube.size);  
+            }  
+
+            moveYellowPoints();  
+            detectCollision();  
+            detectRedCubeCollision(); // Verifica colisión con el cubo rojo  
+            requestAnimationFrame(draw);  
+        }  
+
+        updateLives(); // Inicializa la visualización de vidas  
+        draw();  
+    </script>  
+</body>  
+</html>
+
